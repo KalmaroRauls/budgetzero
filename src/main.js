@@ -88,6 +88,8 @@ const ifAnyBudgetExists = (to, from, next) => {
 // eslint-disable-next-line vars-on-top
 export var router = new VueRouter({
   mode: process.env.IS_ELECTRON ? 'hash' : 'history',
+  //Keeps history mode links inside the deployed sub path, e.g. /budgetzero/
+  base: process.env.BASE_URL,
   routes: [
     {
       path: '*',

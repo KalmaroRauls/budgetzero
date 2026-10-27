@@ -4,6 +4,8 @@ const version = JSON.parse(packageJson).version || 0
 const webpack = require('webpack')
 
 module.exports = {
+  //Served from https://<user>.github.io/budgetzero/ in production, `/` during `npm run serve`
+  publicPath: process.env.NODE_ENV === 'production' ? '/budgetzero/' : '/',
   pluginOptions: {
     electronBuilder: {
       builderOptions: {
