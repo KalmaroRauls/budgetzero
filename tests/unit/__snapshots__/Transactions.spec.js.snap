@@ -134,8 +134,11 @@ exports[`transaction table renders correct snapshot 1`] = `
         <v-icon-stub left=""> mdi-cloud-upload </v-icon-stub> <span>Import</span>
       </v-btn-stub>
     </v-col-stub>
+    <v-col-stub cols="2" tag="div" class="pt-0 pb-0">
+      <v-select-stub errorcount="1" errormessages="" messages="" rules="" successmessages="" value="all" appendicon="$dropdown" backgroundcolor="" dense="true" hidedetails="true" id="searchFieldSelect" label="Search by" loaderheight="2" clearicon="$clear" singleline="true" type="text" valuecomparator="[Function]" nodatatext="$vuetify.noDataText" items="[object Object],[object Object],[object Object],[object Object],[object Object],[object Object]" itemcolor="primary" itemdisabled="disabled" itemtext="text" itemvalue="value" menuprops="[object Object]" class="pt-0"></v-select-stub>
+    </v-col-stub>
     <v-col-stub tag="div" class="pt-0 pb-0">
-      <v-text-field-stub errorcount="1" errormessages="" messages="" rules="" successmessages="" value="" appendicon="search" backgroundcolor="" hidedetails="true" label="Search" loaderheight="2" clearable="true" clearicon="$clear" singleline="true" type="text" class="pt-0"></v-text-field-stub>
+      <v-combobox-stub errorcount="1" errormessages="" messages="" rules="" successmessages="" value="" appendicon="search" backgroundcolor="" dense="true" hidedetails="true" id="searchInput" label="Search all fields" loaderheight="2" clearable="true" clearicon="$clear" singleline="true" type="text" valuecomparator="[Function]" nodatatext="$vuetify.noDataText" items="" itemcolor="primary" itemdisabled="disabled" itemtext="text" itemvalue="value" menuprops="[object Object]" returnobject="true" allowoverflow="true" filter="[Function]" hidenodata="true" delimiters="" class="pt-0"></v-combobox-stub>
     </v-col-stub>
   </v-row-stub>
   <v-divider-stub></v-divider-stub>

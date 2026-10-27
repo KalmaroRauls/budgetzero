@@ -124,6 +124,15 @@
         </v-list-item-content>
       </v-list-item>
 
+      <v-list-item :to="{ path: '/piechart' }" id="piechartSidebarBtn">
+        <v-list-item-icon>
+          <v-icon>mdi-chart-pie</v-icon>
+        </v-list-item-icon>
+        <v-list-item-content>
+          <v-list-item-title class="subtitle-1"> Piechart </v-list-item-title>
+        </v-list-item-content>
+      </v-list-item>
+
       <!-- <v-list-item :to="{ path: '/all_transactions' }">
         <v-list-item-action>
           <v-icon>mdi-bank</v-icon>

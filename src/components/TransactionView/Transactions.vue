@@ -148,15 +148,47 @@
           <span>Import</span>
         </v-btn>
       </v-col>
+      <v-col cols="2" class="pt-0 pb-0">
+        <v-select
+          id="searchFieldSelect"
+          v-model="searchField"
+          :items="searchFields"
+          label="Search by"
+          class="pt-0"
+          dense
+          single-line
+          hide-details
+        />
+      </v-col>
       <v-col class="pt-0 pb-0">
-        <v-text-field
+        <!-- Payee, Category and Memo get autocomplete, Inflow/Outflow are amounts -->
+        <v-combobox
+          v-if="isTextSearchField"
+          id="searchInput"
           v-model="search"
+          :items="searchSuggestions"
+          :label="searchFieldLabel"
           class="pt-0"
           append-icon="search"
-          label="Search"
+          single-line
+          hide-details
+          hide-no-data
+          clearable
+          dense
+        />
+        <v-text-field
+          v-else
+          id="searchInput"
+          v-model="search"
+          :label="searchFieldLabel"
+          class="pt-0"
+          append-icon="search"
           single-line
           hide-details
           clearable
+          dense
+          type="number"
+          step="0.01"
         />
       </v-col>
     </v-row>
@@ -541,6 +573,15 @@ export default {
       },
       selected: [],
       search: '',
+      searchField: 'all',
+      searchFields: [
+        { text: 'All fields', value: 'all' },
+        { text: 'Payee', value: 'payee' },
+        { text: 'Category', value: 'category' },
+        { text: 'Memo', value: 'memo' },
+        { text: 'Inflow', value: 'inflow' },
+        { text: 'Outflow', value: 'outflow' }
+      ],
       timeout: 1000,
       payeeSearchText: '',
       date: new Date().toISOString().substr(0, 10),
@@ -707,6 +748,35 @@ export default {
         this.editedItem.value = -Math.round(this.parseInflowOutflow(newValue) * 100)
       }
     },
+    isTextSearchField() {
+      return this.searchField !== 'inflow' && this.searchField !== 'outflow'
+    },
+    searchFieldLabel() {
+      const field = this.searchFields.find(field => field.value === this.searchField)
+      return field ? `Search ${field.text.toLowerCase()}` : 'Search'
+    },
+    /**
+     * Type-to-narrow suggestions for the picked search field
+     */
+    searchSuggestions() {
+      if (this.searchField === 'payee') {
+        //Transfers are stored against the account, so account names help too
+        const payeeNames = this.payees.map(item => item.name).filter(name => name !== 'Payee not selected.')
+        const accountNames = this.accounts.map(acc => acc.name)
+
+        return _.uniq(payeeNames.concat(accountNames)).sort()
+      }
+
+      if (this.searchField === 'category') {
+        return _.uniq(this.categories.map(cat => cat.name)).sort()
+      }
+
+      if (this.searchField === 'memo') {
+        return _.uniq(this.transactions.map(trn => trn.memo).filter(memo => !!memo)).sort()
+      }
+
+      return []
+    },
     payee() {
       if (this.editedItem.payee in this.payee_map) {
         return this.payee_map[this.editedItem.payee]
@@ -758,21 +828,7 @@ export default {
         return tpo
       }
 
-      if (!this.search) return trans
-
-      console.log('payee is', trans)
-      return trans.filter(row => {
-        if (this.payee_map[row.payee] !== undefined) {
-          return (
-            this.payee_map[row.payee].toUpperCase().includes(this.search.toUpperCase()) ||
-            JSON.stringify(row)
-              .toUpperCase()
-              .includes(this.search.toUpperCase())
-          )
-        } else {
-          return false
-        }
-      })
+      return trans.filter(row => this.transactionMatchesSearch(row))
     },
     selected_account() {
       if (this.isSingleAccount) {
@@ -788,6 +844,12 @@ export default {
       return this.$refs.transactions_table_form.validate()
     }
   },
+  watch: {
+    searchField() {
+      //Amounts and text mean different things, so start clean when the field changes
+      this.search = ''
+    }
+  },
   mounted() {
     this.$nextTick(() => {
       window.addEventListener('resize', this.onResize)
@@ -798,6 +860,90 @@ export default {
     window.removeEventListener('resize', this.onResize)
   },
   methods: {
+    /**
+     * Name shown for a transaction's payee, including transfers
+     */
+    payeeLabel(row) {
+      if (row.payee in this.payee_map) {
+        return this.payee_map[row.payee]
+      }
+
+      if (row.payee in this.account_map) {
+        return 'Transfer: ' + this.account_map[row.payee]
+      }
+
+      return row.transfer ? 'Transfer' : 'Payee not selected.'
+    },
+    /**
+     * Does a transaction match the search text and the picked search field?
+     */
+    transactionMatchesSearch(row) {
+      const query = this.search ? this.search.toString().trim() : ''
+
+      if (this.searchField === 'all') {
+        if (!query) {
+          return true
+        }
+
+        return (
+          this.payeeLabel(row)
+            .toUpperCase()
+            .includes(query.toUpperCase()) || JSON.stringify(row).toUpperCase().includes(query.toUpperCase())
+        )
+      }
+
+      const value = row.value ? row.value : 0
+
+      if (this.searchField === 'inflow' || this.searchField === 'outflow') {
+        //Picking inflow/outflow already narrows the table down to that direction
+        if (this.searchField === 'inflow' && value <= 0) {
+          return false
+        }
+
+        if (this.searchField === 'outflow' && value >= 0) {
+          return false
+        }
+
+        if (!query) {
+          return true
+        }
+
+        //Amounts can be typed as dollars (38.64) or as cents (3864)
+        const amount = parseFloat(this.parseInflowOutflow(query))
+
+        if (isNaN(amount)) {
+          return false
+        }
+
+        const dollars = Math.abs(value) / 100
+
+        return Math.abs(dollars - amount) < 0.005 || Math.abs(Math.abs(value) - amount) < 0.005
+      }
+
+      if (!query) {
+        return true
+      }
+
+      const needle = query.toUpperCase()
+
+      if (this.searchField === 'payee') {
+        return this.payeeLabel(row)
+          .toUpperCase()
+          .includes(needle)
+      }
+
+      if (this.searchField === 'category') {
+        const category = this.category_map[row.category] ? this.category_map[row.category] : 'Uncategorized'
+
+        return category.toUpperCase().includes(needle)
+      }
+
+      if (this.searchField === 'memo') {
+        return (row.memo ? row.memo : '').toUpperCase().includes(needle)
+      }
+
+      return true
+    },
     parseInflowOutflow(inputCurrency) {
       //Remove all non=digit chars except for period
       return inputCurrency.toString().replace(/[^0-9.]/g, '')

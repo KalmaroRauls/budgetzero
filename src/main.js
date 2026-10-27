@@ -32,6 +32,7 @@ import Profile from './components/Auth/Profile.vue'
 import CreateBudget from './components/CreateBudget.vue'
 import Manage from './components/Manage.vue'
 import Reports from './components/Reports.vue'
+import Piechart from './components/Piechart.vue'
 
 /**
  * Sweet Alert
@@ -110,6 +111,11 @@ export var router = new VueRouter({
     {
       path: '/reports',
       component: Reports
+      // beforeEnter: ifAnyBudgetExists,
+    },
+    {
+      path: '/piechart',
+      component: Piechart
       // beforeEnter: ifAnyBudgetExists,
     },
     {
