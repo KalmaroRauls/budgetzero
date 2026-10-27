@@ -31,11 +31,11 @@ jobs:
           node-version: 18
           cache: npm
 
-      #--ignore-scripts skips the node-sass 6 install script (no binary exists for
-      #Node 18, the build only uses dart-sass) and the electron-builder postinstall
-      #that is only needed for the desktop builds
+      #--legacy-peer-deps lets npm install resolve the peer ranges in this tree
+      #--ignore-scripts is still required: node-sass 6 has no binary for Node 18 (the
+      #build uses dart-sass) and the electron-builder postinstall is only for desktop builds
       - name: Install dependencies
-        run: npm ci --ignore-scripts
+        run: npm install --legacy-peer-deps --ignore-scripts
 
       - name: Build
         run: npm run build
