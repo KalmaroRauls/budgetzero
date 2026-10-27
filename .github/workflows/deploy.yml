@@ -32,10 +32,13 @@ jobs:
           cache: npm
 
       #--legacy-peer-deps lets npm install resolve the peer ranges in this tree
-      #--ignore-scripts is still required: node-sass 6 has no binary for Node 18 (the
-      #build uses dart-sass) and the electron-builder postinstall is only for desktop builds
+      #--ignore-scripts skips the install scripts (node-sass 6 has no binary for Node 18
+      #and the web build uses dart-sass), so electron's binary is fetched explicitly below:
+      #vue-cli-service build requires it and fails with "Electron failed to install correctly"
       - name: Install dependencies
-        run: npm install --legacy-peer-deps --ignore-scripts
+        run: |
+          npm install --legacy-peer-deps --ignore-scripts
+          node node_modules/electron/install.js
 
       - name: Build
         run: npm run build
