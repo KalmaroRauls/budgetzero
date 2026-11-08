@@ -1,9 +1,7 @@
 on:
-  push:
-    branches:
-      - master
-    tags:        
-      - '*'  
+  # Manual only: requires a NETLIFY_SITE_ID secret that is not configured here,
+  # so this was failing on every push. Run it from the Actions tab when needed.
+  workflow_dispatch:
 name: Publish on Netlify
 
 jobs:

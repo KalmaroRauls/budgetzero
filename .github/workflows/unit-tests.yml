@@ -1,6 +1,8 @@
 name: unit tests
-on: 
-  push:
+on:
+  # Manual only: this check cannot install on modern CI runners (node-sass@6) and
+  # was failing on every push. Run it from the Actions tab when needed.
+  workflow_dispatch:
 
 jobs:
   unit_test:

@@ -1,9 +1,8 @@
 name: publish draft release
-on: 
-  push:
-    branches:
-      - master
-      - ci-test
+on:
+  # Manual only: npm ci / Electron packaging need secrets and Node 16, so this
+  # was failing on every push. Run it from the Actions tab when needed.
+  workflow_dispatch:
 jobs:
 
   build_dist:
