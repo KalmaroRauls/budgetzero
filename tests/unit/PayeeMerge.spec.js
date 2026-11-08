@@ -3,8 +3,12 @@ import budget from '@/store/modules/budget-module'
 import { mount, createLocalVue } from '@vue/test-utils'
 import Vuex from 'vuex'
 import Vuetify from 'vuetify'
+import Vue from 'vue'
 import Settings from '@/components/Settings.vue'
 import store from '@/store'
+
+Vue.use(Vuetify)
+Vue.config.productionTip = false
 
 const BUDGET_ID = '5a98dc44-7982-4ecc-aa50-146fc4dc4e16'
 
@@ -231,5 +235,15 @@ describe('Settings merge payee UI', () => {
   it('opens the merge dialog from the Settings button', async () => {
     await wrapper.find('#mergePayeesBtn').trigger('click')
     expect(wrapper.vm.mergeDialogVisible).toBe(true)
+  })
+
+  it('uses searchable autocomplete pickers so long payee lists can be narrowed by typing', async () => {
+    await wrapper.find('#mergePayeesBtn').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.findAllComponents({ name: 'v-autocomplete' }).length).toBe(2)
+    // Both pickers expose a text input instead of a plain dropdown
+    expect(wrapper.find('#mergePayeesSelect').element.tagName).toBe('INPUT')
+    expect(wrapper.find('#mergeTargetSelect').element.tagName).toBe('INPUT')
   })
 })

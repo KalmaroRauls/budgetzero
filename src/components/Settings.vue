@@ -189,7 +189,8 @@
           Pick the duplicate payees you want to merge together, then choose which one's name to keep. Every transaction
           will be reassigned to the kept payee and the other payees will be permanently deleted.
         </p>
-        <v-select
+        <v-autocomplete
+          id="mergePayeesSelect"
           v-model="payeesToMerge"
           :items="selectablePayees"
           item-text="name"
@@ -197,10 +198,14 @@
           label="Payees to merge"
           multiple
           chips
+          small-chips
+          clearable
+          auto-select-first
           dense
           data-cy="mergePayeesSelect"
         />
-        <v-select
+        <v-autocomplete
+          id="mergeTargetSelect"
           v-model="mergeTarget"
           :items="mergeTargetOptions"
           item-text="name"
@@ -209,6 +214,8 @@
           :disabled="payeesToMerge.length === 0"
           :hint="payeesToMerge.length === 0 ? 'Select the payees to merge first' : 'The kept payee keeps its name'"
           persistent-hint
+          clearable
+          auto-select-first
           dense
           data-cy="mergeTargetSelect"
         />
