@@ -2,7 +2,7 @@ import moment from 'moment'
 import Vue from 'vue'
 import validator from 'validator'
 import _ from 'lodash'
-import { sanitizeValueInput } from '../../helper.js'
+import { sanitizeValueInput, buildPayeeMergeDocs } from '../../helper.js'
 
 export default {
   state: {
@@ -502,6 +502,41 @@ export default {
         let payee = await context.dispatch('createPayee', payload)
         return payee.id.slice(-36)
       }
+    },
+
+    /**
+     * Merges one or more payees into a single target payee.
+     * Every transaction that referenced a source payee is reassigned to the
+     * target payee, and the now-unused source payee documents are deleted.
+     * @param {*} context
+     * @param {Object} payload
+     * @param {Array<String>} payload.sourcePayeeIds Full _ids of the payees to merge away
+     * @param {String} payload.targetPayeeId Full _id of the payee to keep
+     */
+    async mergePayees(context, { sourcePayeeIds, targetPayeeId }) {
+      const { updatedTransactions, deletedPayees } = buildPayeeMergeDocs(
+        context.getters.transactions,
+        context.getters.payees,
+        sourcePayeeIds,
+        targetPayeeId
+      )
+
+      const docs = updatedTransactions.concat(deletedPayees)
+
+      if (docs.length === 0) {
+        context.commit('SET_SNACKBAR_MESSAGE', {
+          snackbarMessage: 'Nothing to merge. Pick at least one payee to merge away.',
+          snackbarColor: 'error'
+        })
+        return
+      }
+
+      await context.dispatch('commitBulkDocsToPouchAndVuex', docs)
+
+      context.commit('SET_SNACKBAR_MESSAGE', {
+        snackbarMessage: `Merged ${deletedPayees.length} payee(s) and updated ${updatedTransactions.length} transaction(s).`,
+        snackbarColor: 'primary'
+      })
     },
 
     /**

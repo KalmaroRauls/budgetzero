@@ -173,18 +173,63 @@
     <v-col cols="12">
       <h3 class="mx-2 py-2">
         Payees
+        <v-btn id="mergePayeesBtn" color="accent" dark class="ml-2" small @click="openMergeDialog()">
+          Merge Payees
+        </v-btn>
       </h3>
       <v-data-table :headers="headers" :items="payees.sort((a, b) => (a.name > b.name ? 1 : -1))" class="elevation-1" />
     </v-col>
+
+    <BaseDialogModalComponent v-model="mergeDialogVisible">
+      <template #title>
+        Merge Payees
+      </template>
+      <template #body>
+        <p class="mb-2">
+          Pick the payees you want to merge away, then pick the payee whose name should be kept. Every transaction will
+          be reassigned to the kept payee and the merged-away payees will be permanently deleted.
+        </p>
+        <v-select
+          v-model="payeesToMerge"
+          :items="selectablePayees"
+          item-text="name"
+          item-value="_id"
+          label="Payees to merge away"
+          multiple
+          chips
+          dense
+          data-cy="mergePayeesSelect"
+        />
+        <v-select
+          v-model="mergeTarget"
+          :items="selectablePayees"
+          item-text="name"
+          item-value="_id"
+          label="Keep this payee"
+          dense
+          data-cy="mergeTargetSelect"
+        />
+      </template>
+      <template #actions>
+        <v-spacer />
+        <v-btn color="grey" text @click="mergeDialogVisible = false">
+          Cancel
+        </v-btn>
+        <v-btn color="accent" :disabled="!canMerge" @click="confirmMerge()">
+          Merge
+        </v-btn>
+      </template>
+    </BaseDialogModalComponent>
   </v-row>
 </template>
 
 <script>
 import { mapGetters, mapActions } from 'vuex'
+import BaseDialogModalComponent from './Modals/BaseDialogModalComponent.vue'
 
 export default {
   name: 'Settings',
-  components: {},
+  components: { BaseDialogModalComponent },
   data() {
     return {
       remoteSyncURLInput: null,
@@ -197,6 +242,9 @@ export default {
         { text: 'Name', value: 'name' },
         { text: 'id', value: '_id' }
       ],
+      mergeDialogVisible: false,
+      payeesToMerge: [],
+      mergeTarget: null,
       isProd: process.env.NODE_ENV === 'production'
     }
   },
@@ -212,6 +260,13 @@ export default {
     ]),
     packageVersion() {
       return process.env.PACKAGE_VERSION || '0'
+    },
+    /* Real payees only - the store prepends a placeholder with no _id */
+    selectablePayees() {
+      return this.payees.filter(payee => payee._id)
+    },
+    canMerge() {
+      return this.payeesToMerge.length > 0 && !!this.mergeTarget
     }
   },
   watch: {
@@ -250,6 +305,34 @@ export default {
     createBudget(budgetName) {
       console.log('create called', budgetName)
       this.$store.dispatch('createBudget', budgetName)
+    },
+    openMergeDialog() {
+      this.payeesToMerge = []
+      this.mergeTarget = null
+      this.mergeDialogVisible = true
+    },
+    async confirmMerge() {
+      if (!this.canMerge) {
+        return
+      }
+      // Only prompt when the global confirm dialog is available (it is mounted in App.vue)
+      const confirmed =
+        typeof this.$root.$confirm !== 'function' ||
+        (await this.$root.$confirm(
+          'Merge Payees?',
+          'Every transaction will be reassigned to the kept payee and the merged-away payees will be permanently deleted.',
+          { agreeBtnColor: 'accent', agreeBtnText: 'Merge', cancelBtnColor: 'grey' }
+        ))
+      if (!confirmed) {
+        return
+      }
+      this.$store.dispatch('mergePayees', {
+        sourcePayeeIds: this.payeesToMerge,
+        targetPayeeId: this.mergeTarget
+      })
+      this.mergeDialogVisible = false
+      this.payeesToMerge = []
+      this.mergeTarget = null
     }
   }
 }
