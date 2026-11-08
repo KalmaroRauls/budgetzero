@@ -186,15 +186,15 @@
       </template>
       <template #body>
         <p class="mb-2">
-          Pick the payees you want to merge away, then pick the payee whose name should be kept. Every transaction will
-          be reassigned to the kept payee and the merged-away payees will be permanently deleted.
+          Pick the duplicate payees you want to merge together, then choose which one's name to keep. Every transaction
+          will be reassigned to the kept payee and the other payees will be permanently deleted.
         </p>
         <v-select
           v-model="payeesToMerge"
           :items="selectablePayees"
           item-text="name"
           item-value="_id"
-          label="Payees to merge away"
+          label="Payees to merge"
           multiple
           chips
           dense
@@ -202,10 +202,13 @@
         />
         <v-select
           v-model="mergeTarget"
-          :items="selectablePayees"
+          :items="mergeTargetOptions"
           item-text="name"
           item-value="_id"
           label="Keep this payee"
+          :disabled="payeesToMerge.length === 0"
+          :hint="payeesToMerge.length === 0 ? 'Select the payees to merge first' : 'The kept payee keeps its name'"
+          persistent-hint
           dense
           data-cy="mergeTargetSelect"
         />
@@ -265,14 +268,24 @@ export default {
     selectablePayees() {
       return this.payees.filter(payee => payee._id)
     },
+    /* The payee to keep must be one of the payees being merged */
+    mergeTargetOptions() {
+      return this.selectablePayees.filter(payee => this.payeesToMerge.includes(payee._id))
+    },
     canMerge() {
-      return this.payeesToMerge.length > 0 && !!this.mergeTarget
+      return this.payeesToMerge.length > 1 && this.payeesToMerge.includes(this.mergeTarget)
     }
   },
   watch: {
     // whenever question changes, this function will run
     remoteSyncURL: function(newQuestion, oldQuestion) {
       this.remoteSyncURLInput = newQuestion
+    },
+    // If the currently kept payee is un-checked, clear the selection
+    payeesToMerge(newSelection) {
+      if (this.mergeTarget && !newSelection.includes(this.mergeTarget)) {
+        this.mergeTarget = null
+      }
     }
   },
   mounted() {

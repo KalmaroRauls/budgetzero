@@ -1,5 +1,10 @@
 import { buildPayeeMergeDocs } from '@/helper.js'
 import budget from '@/store/modules/budget-module'
+import { mount, createLocalVue } from '@vue/test-utils'
+import Vuex from 'vuex'
+import Vuetify from 'vuetify'
+import Settings from '@/components/Settings.vue'
+import store from '@/store'
 
 const BUDGET_ID = '5a98dc44-7982-4ecc-aa50-146fc4dc4e16'
 
@@ -148,5 +153,83 @@ describe('mergePayees store action', () => {
     })
 
     expect(committedDocs.length).toBe(0)
+  })
+})
+
+describe('Settings merge payee UI', () => {
+  const localVue = createLocalVue()
+  localVue.use(Vuex)
+
+  const payees = [
+    { _id: `b_${BUDGET_ID}_payee_aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa`, name: 'Walmart' },
+    { _id: `b_${BUDGET_ID}_payee_bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb`, name: 'WALMART #1234' },
+    { _id: `b_${BUDGET_ID}_payee_cccccccc-cccc-cccc-cccc-cccccccccccc`, name: 'Whole Foods' }
+  ]
+  const walmartId = payees[0]._id
+  const walmart2Id = payees[1]._id
+  const wholeFoodsId = payees[2]._id
+
+  let vuetify
+  let wrapper
+
+  beforeEach(() => {
+    vuetify = new Vuetify()
+    localVue.use(vuetify)
+    store.state.pouchdb.payees = payees.map(payee => Object.assign({}, payee))
+    wrapper = mount(Settings, { store, localVue, vuetify })
+  })
+
+  it('offers every real payee in the "payees to merge" selector', () => {
+    const ids = wrapper.vm.selectablePayees.map(payee => payee._id)
+    expect(ids).toHaveLength(3)
+    expect(ids).toEqual(expect.arrayContaining([walmartId, walmart2Id, wholeFoodsId]))
+  })
+
+  it('only offers the selected payees as "keep this payee" options', async () => {
+    // Nothing selected to merge yet -> nothing to keep
+    expect(wrapper.vm.mergeTargetOptions).toEqual([])
+
+    wrapper.vm.payeesToMerge = [walmartId, walmart2Id]
+    await wrapper.vm.$nextTick()
+
+    const mergeNames = wrapper.vm.mergeTargetOptions.map(payee => payee.name)
+    expect(mergeNames).toHaveLength(2)
+    expect(mergeNames).toEqual(expect.arrayContaining(['Walmart', 'WALMART #1234']))
+    // The payee that is not part of the merge selection is never offered
+    expect(wrapper.vm.mergeTargetOptions.map(payee => payee._id)).not.toContain(wholeFoodsId)
+  })
+
+  it('requires a kept payee that is part of the merge selection', async () => {
+    wrapper.vm.payeesToMerge = [walmartId, walmart2Id]
+    wrapper.vm.mergeTarget = walmartId
+    await wrapper.vm.$nextTick()
+    expect(wrapper.vm.canMerge).toBe(true)
+
+    // A single payee cannot be merged into itself
+    wrapper.vm.payeesToMerge = [walmartId]
+    await wrapper.vm.$nextTick()
+    expect(wrapper.vm.canMerge).toBe(false)
+
+    // A kept payee outside the selection is not valid
+    wrapper.vm.payeesToMerge = [walmartId, walmart2Id]
+    wrapper.vm.mergeTarget = wholeFoodsId
+    await wrapper.vm.$nextTick()
+    expect(wrapper.vm.canMerge).toBe(false)
+  })
+
+  it('clears the kept payee when it is removed from the merge selection', async () => {
+    wrapper.vm.payeesToMerge = [walmartId, walmart2Id]
+    wrapper.vm.mergeTarget = walmartId
+    await wrapper.vm.$nextTick()
+
+    wrapper.vm.payeesToMerge = [walmart2Id]
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.vm.mergeTarget).toBe(null)
+  })
+
+  it('opens the merge dialog from the Settings button', async () => {
+    await wrapper.find('#mergePayeesBtn').trigger('click')
+    expect(wrapper.vm.mergeDialogVisible).toBe(true)
   })
 })
